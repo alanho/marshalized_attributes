@@ -1,16 +1,16 @@
 require File.dirname(__FILE__) + '/test_helper'
 
-class SerializedAttributeWithSerializedDataTest < ActiveSupport::TestCase
+class MarshalizedAttributeWithMarshalizedDataTest < ActiveSupport::TestCase
   @@current_time = Time.now.utc.midnight
   @@raw_hash     = {:title => 'abc', :age => 5, :average => 5.1, :birthday => @@current_time.xmlschema, :active => true}
-  SerializedRecord.stubbed_raw_data = SerializedAttributes::Schema.encode(@@raw_hash)
+  MarshalizedRecord.stubbed_raw_data = MarshalizedAttributes::Schema.encode(@@raw_hash)
 
   def setup
-    @newbie  = SerializedRecordWithDefaults.new
-    @record  = SerializedRecord.new
-    @changed = SerializedRecord.new
-    @record.raw_data  = SerializedRecord.stubbed_raw_data
-    @changed.raw_data = SerializedRecord.stubbed_raw_data
+    @newbie  = MarshalizedRecordWithDefaults.new
+    @record  = MarshalizedRecord.new
+    @changed = MarshalizedRecord.new
+    @record.raw_data  = MarshalizedRecord.stubbed_raw_data
+    @changed.raw_data = MarshalizedRecord.stubbed_raw_data
     @changed.title    = 'def'
     @changed.age      = 6
   end
@@ -71,10 +71,10 @@ class SerializedAttributeWithSerializedDataTest < ActiveSupport::TestCase
   end
 
   test "ignores data with extra keys" do
-    @record.raw_data = SerializedAttributes::Schema.encode(@@raw_hash.merge(:foo => :bar))
+    @record.raw_data = MarshalizedAttributes::Schema.encode(@@raw_hash.merge(:foo => :bar))
     assert_not_nil @record.title     # no undefined foo= error
     assert_equal false, @record.save # extra before_save cancels the operation
-    assert_equal @@raw_hash.merge(:active => 1).stringify_keys, SerializedAttributes::Schema.decode(@record.raw_data)
+    assert_equal @@raw_hash.merge(:active => 1).stringify_keys, MarshalizedAttributes::Schema.decode(@record.raw_data)
   end
 
   test "reads strings" do
@@ -179,7 +179,7 @@ class SerializedAttributeWithSerializedDataTest < ActiveSupport::TestCase
      assert_not_nil @record.title
      @record.raw_data = nil
      assert_equal false, @record.save # extra before_save cancels the operation
-     assert_equal @@raw_hash.merge(:active => 1).stringify_keys, SerializedAttributes::Schema.decode(@record.raw_data)
+     assert_equal @@raw_hash.merge(:active => 1).stringify_keys, MarshalizedAttributes::Schema.decode(@record.raw_data)
    end
   
   test "knows untouched record is not changed" do
@@ -203,15 +203,15 @@ class SerializedAttributeWithSerializedDataTest < ActiveSupport::TestCase
   end
 end
 
-class SerializedAttributeTest < ActiveSupport::TestCase
+class MarshalizedAttributeTest < ActiveSupport::TestCase
   def setup
-    @record = SerializedRecord.new
+    @record = MarshalizedRecord.new
   end
 
   test "encodes and decodes data successfully" do
     hash = {:a => 1, :b => 2}
-    encoded = SerializedAttributes::Schema.encode(hash)
-    assert_equal SerializedAttributes::Schema.decode(encoded), hash.stringify_keys
+    encoded = MarshalizedAttributes::Schema.encode(hash)
+    assert_equal MarshalizedAttributes::Schema.decode(encoded), hash.stringify_keys
   end
 
   test "defines #data method on the model" do

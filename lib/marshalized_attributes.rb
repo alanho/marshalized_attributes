@@ -7,10 +7,10 @@ require 'stringio'
 #
 #   class Profile < ActiveRecord::Base
 #     # not needed if used as a rails plugin
-#     SerializedAttributes.setup(self)
+#     MarshalizedAttributes.setup(self)
 #
 #     # assumes #data serializes to raw_data blob field
-#     serialize_attributes do
+#     marshalize_attributes do
 #       string  :title, :description
 #       integer :age
 #       float   :rank, :percentage
@@ -18,7 +18,7 @@ require 'stringio'
 #     end
 #
 #     # Serializes #data to assumed raw_data blob field
-#     serialize_attributes :data do
+#     marshalize_attributes :data do
 #       string  :title, :description
 #       integer :age
 #       float   :rank, :percentage
@@ -26,7 +26,7 @@ require 'stringio'
 #     end
 #
 #     # set the blob field
-#     serialize_attributes :data, :blob => :serialized_field do
+#     marshalize_attributes :data, :blob => :serialized_field do
 #       string  :title, :description
 #       integer :age
 #       float   :rank, :percentage
@@ -34,7 +34,7 @@ require 'stringio'
 #     end
 #   end
 #
-module SerializedAttributes
+module MarshalizedAttributes
   class AttributeType
     attr_reader :default
     def initialize(default = nil)
@@ -42,6 +42,10 @@ module SerializedAttributes
     end
     def encode(s) s end
   end
+  
+  class Array < AttributeType
+     def parse(input)  input.blank? ? [nil] : input end
+   end
 
   class Integer < AttributeType
     def parse(input)  input.blank? ? nil : input.to_i end
@@ -94,7 +98,7 @@ module SerializedAttributes
       return nil if body.blank?
       s = StringIO.new
       z = Zlib::GzipWriter.new(s)
-      z.write ActiveSupport::JSON.encode(body)
+      z.write Marshal.dump(body)
       z.close
       s.string
     end
@@ -103,7 +107,7 @@ module SerializedAttributes
       return {} if body.blank?
       s = StringIO.new(body)
       z = Zlib::GzipReader.new(s)
-      hash = ActiveSupport::JSON.decode(z.read)
+      hash = Marshal.load(z.read)
       z.close
       hash
     end
@@ -151,7 +155,7 @@ module SerializedAttributes
       @model.send(:define_method, data_field) do
         instance_variable_get("@#{data_field}") || begin
           instance_variable_get("@#{changed_ivar}").clear if send("#{changed_ivar}?")
-          decoded = SerializedAttributes::Schema.decode(send(blob_field))
+          decoded = MarshalizedAttributes::Schema.decode(send(blob_field))
           schema  = self.class.send("#{data_field}_schema")
           hash    = Hash.new do |(h, key)|
             type   = schema.fields[key]
@@ -204,7 +208,7 @@ module SerializedAttributes
       changed_ivar = "#{data_field}_changed"
       names.each do |name|
         name_str          = name.to_s
-        type              = SerializedAttributes.types[type_name].new(options[:default])
+        type              = MarshalizedAttributes.types[type_name].new(options[:default])
         @fields[name_str] = type
 
         @model.send(:define_method, name) do
@@ -245,9 +249,10 @@ module SerializedAttributes
   add_type :float,   Float
   add_type :time,    Time
   add_type :boolean, Boolean
+  add_type :array, Array
 
   module ModelMethods
-    def serialize_attributes(field = :data, options = {}, &block)
+    def marshalize_attributes(field = :data, options = {}, &block)
       schema = Schema.new(self, field, options)
       schema.instance_eval(&block)
       schema.fields.freeze
