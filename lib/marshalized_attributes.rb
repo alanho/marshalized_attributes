@@ -198,7 +198,7 @@ module MarshalizedAttributes
 
       @model.before_save do |r|
         schema = r.class.send("#{data_field}_schema")
-        r.send("#{blob_field}=", schema.encode(r.send(data_field)))
+        r.send("#{blob_field}=", schema.encode(r.send(data_field).inject{ |h,kv| h[kv[0]] = kv[1]; h }))
       end
     end
 
